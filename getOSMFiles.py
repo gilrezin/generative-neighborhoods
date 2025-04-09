@@ -13,12 +13,12 @@ from queue import Queue
 # get our data from the API
 api = overpy.Overpass()
 
-# 7820445
+# 1384962
 # relations will come from our neighborhoods list
-relations = [1384962]
+relations = [7820445]
 
-nodes = Queue()
-boundaryNodes = Queue()
+nodesQueue = Queue()
+boundaryNodesQueue = Queue()
 
 # ensures that the way is valid, then inserts it into the list
 def validate_and_insert_nodes(way, polygon):
@@ -43,8 +43,8 @@ def validate_and_insert_nodes(way, polygon):
     elif isinstance(intersection, LineString):
         # Single intersection (either partially or entirely within polygon)
         contained_nodes = list(intersection.coords)
-        nodes.put(contained_nodes)
-        nodes.task_done()
+        nodesQueue.put(contained_nodes)
+        nodesQueue.task_done()
 
         # if partially within the polygon, find the boundary intersection point and add it to the boundaryNodes list
         if not boundaryIntersection.is_empty:
@@ -52,22 +52,21 @@ def validate_and_insert_nodes(way, polygon):
                 intersectionPoint = boundaryIntersection.geoms[0]
             else:
                 intersectionPoint = boundaryIntersection.coords[0]
-            boundaryNodes.put(intersectionPoint)
-            boundaryNodes.task_done()
+            boundaryNodesQueue.put(intersectionPoint)
+            boundaryNodesQueue.task_done()
 
     elif isinstance(intersection, MultiLineString):
         # Multiple intersections
         segment_count = 0
         for segment in intersection.geoms:
             contained_nodes = list(segment.coords)
-            nodes.put(contained_nodes)
-            nodes.task_done()
+            nodesQueue.put(contained_nodes)
+            nodesQueue.task_done()
 
             # if partially within the polygon, find the boundary intersection point and add it to the boundaryNodes list
             if not boundaryIntersection.is_empty:
-                intersectionPoint = boundaryIntersection.coords[0]
-                boundaryNodes.put(tuple(intersectionPoint))
-                boundaryNodes.task_done()
+                boundaryNodesQueue.put((boundaryIntersection.geoms[0].x, boundaryIntersection.geoms[0].y))
+                boundaryNodesQueue.task_done()
             segment_count += 1
 
 # 
@@ -135,12 +134,14 @@ def get_relation_data(relation):
 
     # move from queue to list
     boundaryNodesList = []
-    while not boundaryNodes.empty():
-        boundaryNodesList.append(boundaryNodes.get())
+    while not boundaryNodesQueue.empty():
+        value = boundaryNodesQueue.get()
+        if isinstance(value, tuple):
+            boundaryNodesList.append(value)
 
     nodesList = []
-    while not nodes.empty():
-        nodesList.append(nodes.get())
+    while not nodesQueue.empty():
+        nodesList.append(nodesQueue.get())
 
     # - DEBUGGING - display all boundary nodes over the neighborhood
     for point in boundaryNodesList:

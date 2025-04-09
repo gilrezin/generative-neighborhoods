@@ -13,8 +13,9 @@ from queue import Queue
 # get our data from the API
 api = overpy.Overpass()
 
+# 7820445
 # relations will come from our neighborhoods list
-relations = [7820445, 1384962]
+relations = [1384962]
 
 nodes = Queue()
 boundaryNodes = Queue()
@@ -28,7 +29,6 @@ def validate_and_insert_nodes(way, polygon):
 
     nodes = way.get_nodes(resolve_missing=True)
 
-    # linestring wants longitude before latitude. Not really sure why
     line = LineString([(node.lat, node.lon) for node in nodes])
 
     # find the intersection of the lines
@@ -104,17 +104,17 @@ def get_relation_data(relation):
     polygons = list(polygonize(bbox))
 
     # - DEBUGGING - plot the relation and the way to check for intersection
-    # print(shapely.validation.explain_validity(polygons[0]))
-    # index = next((i for i, way in enumerate(result.ways) if way.id == 97734347), -1)
-    # nodes = result.ways[index].get_nodes(resolve_missing=True)
-    # line = LineString([(node.lat, node.lon) for node in nodes])
+    print(shapely.validation.explain_validity(polygons[0]))
+    index = next((i for i, way in enumerate(result.ways) if way.id == 97734347), -1)
+    nodesDebug = result.ways[index].get_nodes(resolve_missing=True)
+    line = LineString([(node.lat, node.lon) for node in nodesDebug])
     
-    # x, y = polygons[0].exterior.xy  # Extract exterior coordinates
-    # # Plot the polygon
-    # plt.plot(y, x)
-    # plt.xlabel("Longitude")
-    # plt.ylabel("Latitude")
-    # plt.title("Polygon of Geographic Coordinates")
+    x, y = polygons[0].exterior.xy  # Extract exterior coordinates
+    # Plot the polygon
+    plt.plot(y, x)
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.title("Polygon of Geographic Coordinates")
 
     # x2,y2 = line.xy
     # plt.plot(y2,x2)
@@ -124,14 +124,14 @@ def get_relation_data(relation):
     bound_validate_and_insert_nodes = partial(validate_and_insert_nodes, polygon=polygons[0])
 
     # multithread the node add process (speeds up by many factors)
-    with ThreadPoolExecutor() as executor:
-        executor.map(bound_validate_and_insert_nodes, result.ways)
+    # with ThreadPoolExecutor() as executor:
+    #     executor.map(bound_validate_and_insert_nodes, result.ways)
 
-    # way_count = 0
-    # for way in result.ways:
-    #     validate_and_insert_nodes(way, polygons[0]) 
-    #     print(way_count)
-    #     way_count += 1
+    way_count = 0
+    for way in result.ways:
+        validate_and_insert_nodes(way, polygons[0]) 
+        print(way_count)
+        way_count += 1
 
     # move from queue to list
     boundaryNodesList = []
@@ -143,11 +143,10 @@ def get_relation_data(relation):
         nodesList.append(nodes.get())
 
     # - DEBUGGING - display all boundary nodes over the neighborhood
-    # for point in boundaryNodesList:
-    #     plt.plot(y, x)
-    #     plt.plot(point[1], point[0], marker='o', color='orange')
-    # plt.show()
-    # print()
+    for point in boundaryNodesList:
+        plt.plot(y, x)
+        plt.plot(point[1], point[0], marker='o', color='orange')
+    plt.show()
     # - END DEBUGGING -
 
 # for every relation, get our neighborhood data

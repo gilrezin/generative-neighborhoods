@@ -123,14 +123,8 @@ def get_relation_data(relation):
     bound_validate_and_insert_nodes = partial(validate_and_insert_nodes, polygon=polygons[0])
 
     # multithread the node add process (speeds up by many factors)
-    # with ThreadPoolExecutor() as executor:
-    #     executor.map(bound_validate_and_insert_nodes, result.ways)
-
-    way_count = 0
-    for way in result.ways:
-        validate_and_insert_nodes(way, polygons[0]) 
-        print(way_count)
-        way_count += 1
+    with ThreadPoolExecutor() as executor:
+        executor.map(bound_validate_and_insert_nodes, result.ways)
 
     # move from queue to list
     boundaryNodesList = []
@@ -144,16 +138,52 @@ def get_relation_data(relation):
         nodesList.append(nodesQueue.get())
 
     # - DEBUGGING - display all boundary nodes over the neighborhood
-    for point in boundaryNodesList:
-        plt.plot(y, x)
-        plt.plot(point[1], point[0], marker='o', color='orange')
-    plt.show()
+    # for point in boundaryNodesList:
+    #     plt.plot(y, x)
+    #     plt.plot(point[1], point[0], marker='o', color='orange')
+    # plt.show()
     # - END DEBUGGING -
 
-# for every relation, get our neighborhood data
-for relation in relations:
-    print(relation)
-    get_relation_data(relation)
+    return nodesList, boundaryNodesList, polygons[0]
 
-# test for a single relation
-#get_relation_data(1384962)
+def convert_absolute_to_relative_coords(nodesList, boundaryNodes, boundary):
+    boundaryCoords = list(boundary.exterior.coords)
+
+    # find our relative coordinate zero point to base our calculations off
+    minx, miny, maxx, maxy = boundary.bounds
+    relativeCoordinateZero = (minx, miny)
+
+    # set the boundary's coordinates to relative coordinates
+    for i in range(len(boundaryCoords)):
+        boundaryCoords[i] = tuple(round(x - y, 7) for x, y in zip(boundaryCoords[i], relativeCoordinateZero))
+    
+    # set the boundary nodes coordinates to relative ones
+    for i in range(len(boundaryNodes)):
+        boundaryNodes[i] = tuple(round(x - y, 7) for x, y in zip(boundaryNodes[i], relativeCoordinateZero))
+
+    # set the nodes of the road's coordinates to relative ones
+    for i in range(len(nodesList)):
+        for j in range(len(nodesList[i])):
+            nodesList[i][j] = tuple(round(x - y, 7) for x, y in zip(nodesList[i][j], relativeCoordinateZero))
+
+    return nodesList, boundaryNodesList, boundaryCoords
+        
+
+
+# for every relation, get our neighborhood data
+
+with open("training_data.txt", "w") as file:
+    file.write("training_data = [\n")
+
+    for relation in relations:
+        print(relation)
+        nodesList, boundaryNodesList, boundary = get_relation_data(relation)
+
+        # convert all the absolute geographic coordinates to relative ones
+        relativeNodesList, relativeBoundaryNodesList, relativeBoundaryList = convert_absolute_to_relative_coords(nodesList, boundaryNodesList, boundary)
+
+        new_entry = {'text_input': 'bounds: ' + str(relativeNodesList) + '\nconnecting points: ' + str(relativeBoundaryNodesList), 'output': str(nodesList)}
+        file.write("  " + str(new_entry) + "\n")
+        file.flush()
+
+    file.write("]")

@@ -10,11 +10,13 @@ def polygon_to_prompt(polygon, connecting_nodes):
 
     # set the boundary's coordinates to relative coordinates
     for i in range(len(boundaryCoords)):
-        boundaryCoords[i] = tuple(f"{x - y:.5f}" for x, y in zip(boundaryCoords[i], relativeCoordinateZero))
+        #boundaryCoords[i] = tuple(f"{x - y:.5f}" for x, y in zip(boundaryCoords[i], relativeCoordinateZero))
+        boundaryCoords[i] =(round((boundaryCoords[i][0] - minx) / (maxx - minx), 5), round((boundaryCoords[i][1] - miny) / (maxy - miny), 5))
     
     # set the boundary nodes coordinates to relative ones
     for i in range(len(connecting_nodes)):
-        connecting_nodes[i] = tuple(f"{x - y:.5f}" for x, y in zip(connecting_nodes[i], relativeCoordinateZero))
+        #connecting_nodes[i] = tuple(f"{x - y:.5f}" for x, y in zip(connecting_nodes[i], relativeCoordinateZero))
+        connecting_nodes[i] = (round((connecting_nodes[i][0] - minx) / (maxx - minx), 5), round((connecting_nodes[i][1] - miny) / (maxy - miny), 5))
 
     # form a prompt accepted by the LLM
     print("bounds: [" + str(boundaryCoords) + "]   connecting points: " + str(connecting_nodes))

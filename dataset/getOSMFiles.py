@@ -197,6 +197,11 @@ with open("training_data.txt", "w") as file:
             # convert all the absolute geographic coordinates to relative ones
             relativeNodesList, relativeBoundaryNodesList, relativeBoundaryList = convert_absolute_to_relative_coords(nodesList, boundaryNodesList, boundary)
 
-            new_entry = '''{\"messages\": [{\"role\": \"system\", \"content\": \"Your job is to draw new neighborhoods given the coordinate boundaries listed by the user. Within those boundaries, draw roads from the supplied connecting points with the format [[(lat, long), (lat, long)]] where the inner square brackets represent a single road and every coordinate pair represents a point on that road.\"}, {\"role\": \"user\", \"content\": \"bounds: ''' + str(relativeNodesList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '''\"}, {\"role\": \"assistant\", \"content\": \"''' + str(nodesList) + "\"}]}"
+            # uncomment for ChatGPT formatted dataset
+            #new_entry = '''{\"messages\": [{\"role\": \"system\", \"content\": \"Your job is to draw new neighborhoods given the coordinate boundaries listed by the user. Within those boundaries, draw roads from the supplied connecting points with the format [[(lat, long), (lat, long)]] where the inner square brackets represent a single road and every coordinate pair represents a point on that road.\"}, {\"role\": \"user\", \"content\": \"bounds: ''' + str(relativeNodesList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '''\"}, {\"role\": \"assistant\", \"content\": \"''' + str(nodesList) + "\"}]}"
+
+            # uncomment for Gemini formatted dataset
+            new_entry = "  [\"bounds: " + str(relativeBoundaryList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '\", \"' + str(relativeNodesList) + '\"],'
+
             file.write(new_entry + "\n")
             file.flush()

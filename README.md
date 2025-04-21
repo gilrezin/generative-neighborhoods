@@ -20,3 +20,11 @@ git clone <your‑repo‑url> demo
 cd demo
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r backend/requirements.txt
+
+
+
+Then in the terminal:
+PYTHONPATH=backend python3 backend/app.py
+
+Start liveserver through index.html
+

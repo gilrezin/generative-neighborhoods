@@ -1,38 +1,36 @@
-"""
-street_utils.py  –  thin wrappers around osmnx/shapely for clarity
-"""
 from typing import List, Tuple
 import osmnx as ox
 import shapely.geometry as sgeom
+import geopandas as gpd
 from shapely.strtree import STRtree
 
-# Suppress OSMnx’s logging noise
 ox.settings.log_console = False
 ox.settings.use_cache = True
 
 def streets_intersecting_polygon(coords: List[Tuple[float, float]]) -> List[str]:
-    """
-    Given polygon vertices (lat, lon) in the same order Leaflet spits out,
-    return a **unique** list of street names whose geometries intersect it.
-    """
     poly = sgeom.Polygon(coords)
     if not poly.is_valid:
-        poly = poly.buffer(0)  # quick fix for self‑intersections
+        poly = poly.buffer(0)
 
-    # Pull only the road network inside a small bounding box to avoid over‑fetch
-    graph = ox.graph_from_polygon(poly.buffer(0.001))   # ~110 m buffer
-    gdf   = ox.utils_graph.graph_to_gdfs(graph, nodes=False)[['geometry', 'name']]
+    # Set EPSG:4326, then reproject to UTM manually (Zone 11 for Pullman WA)
+    gdf = gpd.GeoDataFrame(geometry=[poly], crs="EPSG:4326").to_crs("EPSG:32611")
 
-    # Fast spatial index
-    strtree = STRtree(gdf.geometry.values)
-    idxs    = strtree.query(poly)
+    # Buffer in meters (110m), then return to EPSG:4326
+    buffered = gdf.buffer(110).to_crs("EPSG:4326").iloc[0]
+
+    # Now use OSMnx without any CRS guessing
+    graph = ox.graph_from_polygon(buffered, retain_all=True)
+    edges = ox.utils_graph.graph_to_gdfs(graph, nodes=False)[["geometry", "name"]]
+
+    # Do intersection
+    strtree = STRtree(edges.geometry.values)
+    idxs = strtree.query(poly)
 
     streets = set()
     for i in idxs:
-        geom = gdf.geometry.values[i]
+        geom = edges.geometry.values[i]
         if geom.intersects(poly):
-            name = gdf.iloc[i]['name']
-            # gdf['name'] can be None or a list; normalise to string(s)
+            name = edges.iloc[i]["name"]
             if isinstance(name, list):
                 streets.update(filter(None, name))
             elif name:

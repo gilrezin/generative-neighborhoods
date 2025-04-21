@@ -1,0 +1,4 @@
+html, body, #map { height: 100%; margin: 0; }
+#map { height: 60vh; }
+button { padding: 0.6em 1.2em; font-size: 1rem; }
+pre { background: #202020; color: #e0e0e0; padding: 1em; }

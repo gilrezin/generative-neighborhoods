@@ -11,3 +11,12 @@ Parses each .osm (or .xml) file, collects all relation IDs, remove duplicates, t
 ```
 python3 extract_relation_ids.py overpass_output_data/*.osm -o neighborhood_ids.txt
 ```
+
+# Polygon → Street‑list Demo
+
+## 1  Clone & install
+```bash
+git clone <your‑repo‑url> demo
+cd demo
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -r backend/requirements.txt

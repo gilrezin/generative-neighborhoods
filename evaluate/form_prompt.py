@@ -5,8 +5,9 @@ def polygon_to_prompt(polygon, connecting_nodes):
 
     # find our relative coordinate zero point to base our calculations off
     minx, miny, maxx, maxy = polygon.bounds
-    relativeCoordinateZero = (minx, miny)
-    print("Our relative coordinate zeroing point is " + str(relativeCoordinateZero))
+    minBounds = (minx, miny)
+    maxBounds = (maxx, maxy)
+    print("Boundary is from " + str(minBounds) + " to " + str(maxBounds))
 
     # set the boundary's coordinates to relative coordinates
     for i in range(len(boundaryCoords)):

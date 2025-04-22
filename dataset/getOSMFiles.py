@@ -1,7 +1,8 @@
 # import overpass
 import overpy
 from shapely.geometry import Polygon, Point, LineString, MultiLineString
-from shapely.geometry.polygon import orient
+from shapely.affinity import rotate
+from shapely.affinity import scale
 from shapely.ops import polygonize
 import shapely.validation
 import matplotlib.pyplot as plt
@@ -12,6 +13,7 @@ from queue import Queue
 import copy
 import random
 from getrelations import filter_relations
+import geopandas as gpd
 
 # get our data from the API
 api = overpy.Overpass()
@@ -184,28 +186,129 @@ def convert_absolute_to_relative_coords(nodesList, boundaryNodes, boundary):
     return nodesList, boundaryNodesList, boundaryCoords
         
 
+# def rotate_relation_data(nodesList, boundaryNodesList, boundary):
+#     angle_degrees = random.randint(30, 180)
+
+#     # Step 2: Create GeoDataFrames with CRS set to WGS84
+#     gdf_polygon = gpd.GeoDataFrame(geometry=[boundary], crs="EPSG:4326")
+#     gdf_nodes = gpd.GeoDataFrame(geometry=[LineString([(lon, lat) for lat, lon in line]) for line in nodesList], crs="EPSG:4326")
+#     gdf_boundary_nodes = gpd.GeoDataFrame(geometry=[Point(lon, lat) for lat, lon in boundaryNodesList], crs="EPSG:4326")
+    
+#     # Step 3: Project to a planar CRS (e.g., UTM zone 10N for west coast US)
+#     gdf_polygon_proj = gdf_polygon.to_crs("EPSG:32610")
+#     gdf_nodes_proj = gdf_nodes.to_crs("EPSG:32610")
+#     gdf_boundary_nodes_proj = gdf_boundary_nodes.to_crs("EPSG:32610")
+
+#     # Step 4: Rotate both using the same origin and angle
+#     rotation_origin = gdf_polygon_proj.geometry[0].centroid  # or use a specific Point
+
+#     rotated_polygon = gdf_polygon_proj.geometry.apply(lambda geom: rotate(geom, angle=angle_degrees, origin=rotation_origin))
+#     rotated_nodes = gdf_nodes_proj.geometry.apply(lambda pt: rotate(pt, angle=angle_degrees, origin=rotation_origin))
+#     rotated_boundary_nodes = gdf_boundary_nodes_proj.geometry.apply(lambda pt: rotate(pt, angle=angle_degrees, origin=rotation_origin))
+
+#     # Step 5: Reproject back to lat/lon (EPSG:4326)
+#     rotated_polygon_gdf = gpd.GeoDataFrame(geometry=rotated_polygon, crs="EPSG:32610").to_crs("EPSG:4326")
+#     rotated_nodes_gdf = gpd.GeoDataFrame(geometry=rotated_nodes, crs="EPSG:32610").to_crs("EPSG:4326")
+#     rotated_boundary_nodes_gdf = gpd.GeoDataFrame(geometry=rotated_boundary_nodes, crs="EPSG:32610").to_crs("EPSG:4326")
+
+#     return list(rotated_nodes_gdf.geometry), list(rotated_boundary_nodes_gdf.geometry), list(rotated_polygon_gdf.geometry)
+
+def jitter_points(nodesList):
+    for i in range(len(nodesList)):
+        for j in range(len(nodesList[i])):
+            nodesList[i][j] = (nodesList[i][j][0] + random.uniform(-0.0001, 0.0001), nodesList[i][j][1] + random.uniform(-0.0001, 0.0001))
+
+    return nodesList
+
+def rotate_relation_data(nodesList, boundaryNodesList, boundary):
+    angle_degrees = random.randint(-12, 12) * 15
+
+    centroid = boundary.centroid
+
+    # rotate the boundary
+    rotate(boundary, angle=angle_degrees, origin=centroid)
+
+    # rotate the nodes
+    for i in range(len(nodesList)):
+            nodesList[i] = rotate(LineString(nodesList[i]), angle=angle_degrees, origin=centroid)
+            nodesList[i] = list(nodesList[i].coords)
+
+    # rotate the boundary nodes
+    if (len(boundaryNodesList) == 1):
+        boundaryNodesList.append(boundaryNodesList[0])
+    boundaryNodesList = rotate(LineString(boundaryNodesList), angle=angle_degrees, origin=centroid)
+    boundaryNodesList = list(boundaryNodesList.coords)
+
+    return nodesList, boundaryNodesList, boundary
+
+def reflect_relation_data(nodesList, boundaryNodesList, boundary):
+    centroid = boundary.centroid
+    scale_x = -1
+    scale_y = 1
+    if (random.random() > 0.5): # reflect across y-axis
+        scale_x = 1
+        scale_y = -1
+    # else reflect across x-axis
+    
+    # reflect boundary
+    scale(boundary, xfact=scale_x, yfact=scale_y, origin=centroid)
+
+    # reflect the nodes
+    for i in range(len(nodesList)):
+            nodesList[i] = scale(LineString(nodesList[i]), xfact=scale_x, yfact=scale_y, origin=centroid)
+            nodesList[i] = list(nodesList[i].coords)
+
+    # reflect the boundary nodes
+    if (len(boundaryNodesList) == 1):
+        boundaryNodesList.append(boundaryNodesList[0])
+    boundaryNodesList = scale(LineString(boundaryNodesList), xfact=scale_x, yfact=scale_y, origin=centroid)
+    boundaryNodesList = list(boundaryNodesList.coords)
+
+    return nodesList, boundaryNodesList, boundary
+        
+
 # for every relation, get our neighborhood data
 
 with open("training_data.txt", "w") as file:
 
     for relation in relations:
         # skip any relations that have already been completed (default: 0)
-        if (relation >= 0):
+        if (relation >= 1446449):
             print(relation)
-            #nodesList, boundaryNodesList, boundary = get_relation_data(relations[relations.index(8589640)])
-            #match random.randint(0,5):
-                    
+
             nodesList, boundaryNodesList, boundary = get_relation_data(relation)
 
-            if (not invalid_polygon):
-                # convert all the absolute geographic coordinates to relative ones
-                relativeNodesList, relativeBoundaryNodesList, relativeBoundaryList = convert_absolute_to_relative_coords(nodesList, boundaryNodesList, boundary)
+            # start the process if the polygon isn't broken
+            if (not invalid_polygon and len(boundaryNodesList) > 0):
 
-                # uncomment for ChatGPT formatted dataset
-                #new_entry = '''{\"messages\": [{\"role\": \"system\", \"content\": \"Your job is to draw new neighborhoods given the coordinate boundaries listed by the user. Within those boundaries, draw roads from the supplied connecting points with the format [[(lat, long), (lat, long)]] where the inner square brackets represent a single road and every coordinate pair represents a point on that road.\"}, {\"role\": \"user\", \"content\": \"bounds: ''' + str(relativeNodesList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '''\"}, {\"role\": \"assistant\", \"content\": \"''' + str(nodesList) + "\"}]}"
+                # repeat multiple times to get many augmentations for the data
+                random_repeat = random.randint(0,3)
+                while (random_repeat != 3):
+                    match (random.randint(0,3)):
+                        case 0: # rotate
+                            nodesList, boundaryNodesList, boundary = rotate_relation_data(nodesList, boundaryNodesList, boundary)
+                            print("rotate")
+                            break
+                        case 1: # reflect
+                            nodesList, boundaryNodesList, boundary = reflect_relation_data(nodesList, boundaryNodesList, boundary)
+                            print("reflect")
+                            break
+                        case 2: # jitter
+                            nodesList = jitter_points(nodesList)
+                            print("jitter")
+                            break
 
-                # uncomment for Gemini formatted dataset
-                new_entry = "  [\"bounds: " + str(relativeBoundaryList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '\", \"' + str(relativeNodesList) + '\"],'
+                    # convert all the absolute geographic coordinates to relative ones
+                    relativeNodesList, relativeBoundaryNodesList, relativeBoundaryList = convert_absolute_to_relative_coords(nodesList, boundaryNodesList, boundary)
 
-                file.write(new_entry + "\n")
-                file.flush()
+                    # uncomment for ChatGPT formatted dataset
+                    #new_entry = '''{\"messages\": [{\"role\": \"system\", \"content\": \"Your job is to draw new neighborhoods given the coordinate boundaries listed by the user. Within those boundaries, draw roads from the supplied connecting points with the format [[(lat, long), (lat, long)]] where the inner square brackets represent a single road and every coordinate pair represents a point on that road.\"}, {\"role\": \"user\", \"content\": \"bounds: ''' + str(relativeNodesList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '''\"}, {\"role\": \"assistant\", \"content\": \"''' + str(nodesList) + "\"}]}"
+
+                    # uncomment for Gemini formatted dataset
+                    new_entry = "  [\"bounds: " + str(relativeBoundaryList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '\", \"' + str(relativeNodesList) + '\"],'
+                    
+                    # uncomment for Gemini 2.0 formatted dataset
+                    new_entry = '''{\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": \"bounds: ''' + str(relativeBoundaryList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '''\"}]}, {\"role\": \"model\", \"parts\": [{\"text\": \"''' +  + str(relativeNodesList) + '''\"}]}]}'''
+
+                    file.write(new_entry + "\n")
+                    file.flush()

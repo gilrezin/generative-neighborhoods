@@ -13,14 +13,23 @@ def streets_intersecting_polygon(coords: List[Tuple[float, float]]) -> List[str]
         poly = poly.buffer(0)
 
     # Set EPSG:4326, then reproject to UTM manually (Zone 11 for Pullman WA)
-    gdf = gpd.GeoDataFrame(geometry=[poly], crs="EPSG:4326").to_crs("EPSG:32611")
+    gdf = gpd.GeoDataFrame(geometry=[poly], crs="EPSG:4326")
+    utm_crs = "EPSG:32611"  # UTM Zone 11N for Pullman, WA
+    
+    # Buffer in meters (110m) in UTM CRS for accurate distance
+    buffered = gdf.to_crs(utm_crs).buffer(110).to_crs("EPSG:4326")
+    buffered_crs_iloc = buffered.iloc[0]
 
-    # Buffer in meters (110m), then return to EPSG:4326
-    buffered = gdf.buffer(110).to_crs("EPSG:4326").iloc[0]
-
-    # Now use OSMnx without any CRS guessing
-    graph = ox.graph_from_polygon(buffered, retain_all=True)
+    # Create graph using the polygon in WGS84 but specify network_type if needed
+    graph = ox.graph_from_polygon(
+        buffered_crs_iloc,
+        retain_all=True,
+        network_type='all',  # or 'drive', 'walk', 'bike' as needed
+        crs="EPSG:4326"  # explicitly tell OSMnx the input CRS
+    )
+    
     edges = ox.utils_graph.graph_to_gdfs(graph, nodes=False)[["geometry", "name"]]
+
 
     # Do intersection
     strtree = STRtree(edges.geometry.values)

@@ -28,3 +28,5 @@ PYTHONPATH=backend python3 backend/app.py
 
 Start liveserver through index.html
 
+http://localhost:5050/
+

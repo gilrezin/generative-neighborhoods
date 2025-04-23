@@ -7,11 +7,13 @@
   <!-- Leaflet + Leaflet.Draw CDN -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
 
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <h2>Sketch a polygon, then click “Submit to backend”</h2>
+  <input type="file" id="gpxUpload" accept=".gpx" />  <!-- The GPX Upload Button -->
   <div id="map"></div>
   <button id="submitBtn" disabled>Submit to backend</button>
 
@@ -19,6 +21,8 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
   <script src="js/map.js"></script>
+  
 </body>
 </html>

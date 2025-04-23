@@ -164,19 +164,19 @@ def convert_absolute_to_relative_coords(nodesList, boundaryNodes, boundary):
     # set the boundary's coordinates to relative coordinates
     for i in range(len(boundaryCoords)):
         # for each tuple, subtract by the zeroing coordinate
-        boundaryCoords[i] =(round((boundaryCoords[i][0] - minx) / (maxx - minx), 5), round((boundaryCoords[i][1] - miny) / (maxy - miny), 5))
+        boundaryCoords[i] =((boundaryCoords[i][0] - minx) / (maxx - minx), (boundaryCoords[i][1] - miny) / (maxy - miny))
         #boundaryCoords[i] = tuple(f"{x - y:.5f}" for x, y in zip(boundaryCoords[i], relativeCoordinateZero))
     
     # set the boundary nodes coordinates to relative ones
     for i in range(len(boundaryNodes)):
         #boundaryNodes[i] = tuple(f"{x - y:.5f}" for x, y in zip(boundaryNodes[i], relativeCoordinateZero))
-        boundaryNodes[i] = (round((boundaryNodes[i][0] - minx) / (maxx - minx), 5), round((boundaryNodes[i][1] - miny) / (maxy - miny), 5))
+        boundaryNodes[i] = ((boundaryNodes[i][0] - minx) / (maxx - minx), (boundaryNodes[i][1] - miny) / (maxy - miny))
 
     # set the nodes of the road's coordinates to relative ones
     for i in range(len(nodesList)):
         for j in range(len(nodesList[i])):
             #nodesList[i][j] = tuple(f"{x - y:.5f}" for x, y in zip(nodesList[i][j], relativeCoordinateZero))
-            nodesList[i][j] = (round((nodesList[i][j][0] - minx) / (maxx - minx), 5), round((nodesList[i][j][1] - miny) / (maxy - miny), 5))
+            nodesList[i][j] = ((nodesList[i][j][0] - minx) / (maxx - minx), (nodesList[i][j][1] - miny) / (maxy - miny))
 
     return nodesList, boundaryNodesList, boundaryCoords
 
@@ -200,11 +200,13 @@ def rotate_relation_data(nodesList, boundaryNodesList, boundary):
     # Rotation process: convert to np array, shift to origin (centered), rotate, then shift back, output as list
 
     # rotate nodesList
-    for list in nodesList:
-        list_np = np.array(list)
+    rotatedNodesList = []
+    for group in nodesList:
+        list_np = np.array(group)
         shifted = list_np - (0.5, 0.5)
         rotated = shifted @ rotation_matrix.T
-        rotatedNodesList = rotated + (0.5, 0.5)
+        result = rotated + (0.5, 0.5)
+        rotatedNodesList.append([tuple(float(x) for x in pt) for pt in result])
     
     # rotate boundaryNodesList
     list_np = np.array(boundaryNodesList)
@@ -218,7 +220,7 @@ def rotate_relation_data(nodesList, boundaryNodesList, boundary):
     rotated = shifted @ rotation_matrix.T
     rotatedBoundary = rotated + (0.5, 0.5)
 
-    return rotatedNodesList.tolist(), rotatedBoundaryNodesList.tolist(), rotatedBoundary.tolist()
+    return rotatedNodesList, rotatedBoundaryNodesList.tolist(), rotatedBoundary.tolist()
 
 def reflect_relation_data(relativeNodesList, relativeBoundaryNodesList, relativeBoundary):
     reflect_x = 1
@@ -239,10 +241,22 @@ def reflect_relation_data(relativeNodesList, relativeBoundaryNodesList, relative
 
     return relativeNodesList, relativeBoundaryNodesList, relativeBoundary
 
+def round_relation_data(augmentedNodesList, augmentedBoundaryNodesList, augmentedBoundary):
+    round_decimal = 5
 
+    for i in range(len(augmentedBoundary)):
+        augmentedBoundary[i] = (round(augmentedBoundary[i][0], round_decimal), round(augmentedBoundary[i][1], round_decimal))
+
+    for i in range(len(augmentedBoundaryNodesList)):
+        augmentedBoundaryNodesList[i] = (round(augmentedBoundaryNodesList[i][0], round_decimal), round(augmentedBoundaryNodesList[i][1], round_decimal))
+
+    for i in range(len(augmentedNodesList)):
+        for j in range(len(augmentedNodesList[i])):
+            augmentedNodesList[i][j] = (round(augmentedNodesList[i][j][0], round_decimal), round(augmentedNodesList[i][j][1], round_decimal))
+
+    return augmentedNodesList, augmentedBoundaryNodesList, augmentedBoundary
 
 # for every relation, get our neighborhood data
-
 with open("training_data.txt", "w") as file:
 
     for relation in relations:
@@ -270,15 +284,17 @@ with open("training_data.txt", "w") as file:
                                 print("jitter")
                                 augmentedNodesList, augmentedBoundaryNodesList, augmentedBoundary = jitter_points(relativeNodesList, relativeBoundaryNodesList, relativeBoundaryList)
 
+                        # round every value to 5 decimal points
+                        roundedNodesList, roundedBoundaryNodesList, roundedBoundary = round_relation_data(augmentedNodesList, augmentedBoundaryNodesList, augmentedBoundary)
 
-                    # uncomment for ChatGPT formatted dataset
-                    #new_entry = '''{\"messages\": [{\"role\": \"system\", \"content\": \"Your job is to draw new neighborhoods given the coordinate boundaries listed by the user. Within those boundaries, draw roads from the supplied connecting points with the format [[(lat, long), (lat, long)]] where the inner square brackets represent a single road and every coordinate pair represents a point on that road.\"}, {\"role\": \"user\", \"content\": \"bounds: ''' + str(relativeNodesList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '''\"}, {\"role\": \"assistant\", \"content\": \"''' + str(nodesList) + "\"}]}"
+                        # uncomment for ChatGPT formatted dataset
+                        #new_entry = '''{\"messages\": [{\"role\": \"system\", \"content\": \"Your job is to draw new neighborhoods given the coordinate boundaries listed by the user. Within those boundaries, draw roads from the supplied connecting points with the format [[(lat, long), (lat, long)]] where the inner square brackets represent a single road and every coordinate pair represents a point on that road.\"}, {\"role\": \"user\", \"content\": \"bounds: ''' + str(relativeNodesList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '''\"}, {\"role\": \"assistant\", \"content\": \"''' + str(nodesList) + "\"}]}"
 
-                    # uncomment for Gemini formatted dataset
-                    #new_entry = "  [\"bounds: " + str(relativeBoundaryList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '\", \"' + str(relativeNodesList) + '\"],'
-                    
-                    # uncomment for Gemini 2.0 formatted dataset
-                    new_entry = '''{\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": \"bounds: ''' + str([round(node, 5) for node in relativeNodesList]) + '   connecting points: ' + str([round(node, 5) for node in relativeBoundaryNodesList]) + '''\"}]}, {\"role\": \"model\", \"parts\": [{\"text\": \"''' + str([round(node, 5) for node in relativeBoundaryList]) + '''\"}]}]}'''
+                        # uncomment for Gemini formatted dataset
+                        #new_entry = "  [\"bounds: " + str(relativeBoundaryList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '\", \"' + str(relativeNodesList) + '\"],'
+                        
+                        # uncomment for Gemini 2.0 formatted dataset
+                        new_entry = '''{\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": \"bounds: ''' + str(roundedBoundary) + '   connecting points: ' + str(roundedBoundaryNodesList) + '''\"}]}, {\"role\": \"model\", \"parts\": [{\"text\": \"''' + str(roundedNodesList) + '''\"}]}]}'''
 
-                    file.write(new_entry + "\n")
-                    file.flush()
+                        file.write(new_entry + "\n")
+                        file.flush()

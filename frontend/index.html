@@ -2,23 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Polygon → Street Demo</title>
+  <title>Polygon → Street Demo</title>
 
-  <!-- Leaflet + Leaflet.Draw CDN -->
+  <!-- Leaflet core & drawing tools -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
-
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <h2>Sketch a polygon, then click “Submit to backend”</h2>
-  <div id="map"></div>
-  <button id="submitBtn" disabled>Submit to backend</button>
+  <h2>Sketch a polygon, send to backend, OR paste LLM nodes and render them</h2>
+
+  <!-- GPX upload -->
+  <input type="file" id="gpxUpload" accept=".gpx" />
+
+  <!-- ====  LLM-node section  ==== -->
+  <fieldset style="margin-top:8px">
+    <legend><strong>LLM node renderer</strong></legend>
+
+    <!-- bounding box inputs -->
+    <label>min Lat <input id="minLat" type="number" step="0.00001" value="46.72200"></label>
+    <label>min Lng <input id="minLng" type="number" step="0.00001" value="-117.17500"></label>
+    <label>max Lat <input id="maxLat" type="number" step="0.00001" value="46.73600"></label>
+    <label>max Lng <input id="maxLng" type="number" step="0.00001" value="-117.15750"></label>
+
+    <br><br>
+    <!-- textarea for the raw LLM output -->
+    <textarea id="nodeInput" rows="3" cols="80"
+      placeholder="Paste LLM output e.g. [[(1.0, 0.05), (0.83, 0.39), ...]]"></textarea>
+    <br>
+    <button id="displayNodesBtn">Display Nodes on Map</button>
+  </fieldset>
+
+  <!-- Leaflet map & polygon submit -->
+  <div id="map" style="height: 500px; margin-top:10px"></div>
+  <button id="submitBtn" disabled>Submit polygon to backend</button>
 
   <pre id="output"></pre>
 
+  <!-- scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mpetazzoni/leaflet-gpx@1.5.0/gpx.js"></script>
   <script src="js/map.js"></script>
 </body>
 </html>

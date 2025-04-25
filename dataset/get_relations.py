@@ -4,6 +4,7 @@ from shapely.geometry import Polygon, Point, LineString, MultiLineString
 from shapely.geometry.polygon import orient
 from shapely.ops import polygonize
 
+# generates a new object containing all relations (~5min to generate)
 def get_admin_relations():
     api = overpy.Overpass()
     
@@ -52,8 +53,3 @@ def filter_relations():
 
     print(len(relations))
     return relations
-
-# uncomment to generate a new object containing all relations (~5min to generate)
-#get_admin_relations()
-
-#print(filter_relations())

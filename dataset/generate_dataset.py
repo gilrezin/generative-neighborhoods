@@ -7,7 +7,7 @@ from shapely.ops import polygonize
 import shapely.validation
 from queue import Queue
 import random
-from getrelations import filter_relations
+from dataset.get_relations import filter_relations
 import numpy as np
 
 # get our data from the API
@@ -22,7 +22,7 @@ boundaryNodesQueue = Queue()
 
 invalid_polygon = False
 
-# ensures that the way is valid, then inserts it into the list
+# function that ensures that the way is valid, then inserts it into the list
 def validate_and_insert_nodes(way, polygon):
     global invalid_polygon
     if (not invalid_polygon):
@@ -78,6 +78,7 @@ def validate_and_insert_nodes(way, polygon):
     else:
         return
 
+# function that gets the associated relation data from a relation id
 def get_relation_data(relation):
     # call the API with our desired area and relation
     result = api.query("""
@@ -128,8 +129,6 @@ def get_relation_data(relation):
     invalid_polygon = False
     for way in result.ways:
         validate_and_insert_nodes(way, polygons[0])
-    #print(nodesQueue.qsize())
-    #print(boundaryNodesQueue.qsize())
 
     # move from queue to list
     boundaryNodesList = []
@@ -151,15 +150,13 @@ def get_relation_data(relation):
 
     return nodesList, boundaryNodesList, polygons[0]
 
+
+# function to augment a geographic value in the dataset with reflections across the x/y axis.
 def convert_absolute_to_relative_coords(nodesList, boundaryNodes, boundary):
     boundaryCoords = list(boundary.exterior.coords)
 
     # find our relative coordinate zero point to base our calculations off
     minx, miny, maxx, maxy = boundary.bounds
-    relativeCoordinateZero = (minx, miny)
-    relativeCoordinateMin = (minx, miny)
-    relativeCoordinateMax = (maxx, maxy)
-    #print("Our relative coordinate zeroing point is " + str(relativeCoordinateZero))
 
     # set the boundary's coordinates to relative coordinates
     for i in range(len(boundaryCoords)):
@@ -180,6 +177,8 @@ def convert_absolute_to_relative_coords(nodesList, boundaryNodes, boundary):
 
     return nodesList, boundaryNodesList, boundaryCoords
 
+
+# function to augment a geographic value in the dataset with minor jitters to the coordinates.
 def jitter_points(nodesList, boundaryNodesList, boundary):
     for i in range(len(nodesList)):
         for j in range(len(nodesList[i])):
@@ -187,6 +186,8 @@ def jitter_points(nodesList, boundaryNodesList, boundary):
 
     return nodesList, boundaryNodesList, boundary
 
+
+# function to augment a geographic value in the dataset with variations in rotation.
 def rotate_relation_data(nodesList, boundaryNodesList, boundary):
     angle_degrees = random.randint(-12, 12) * 15
     angle_rad = np.deg2rad(angle_degrees)
@@ -222,6 +223,8 @@ def rotate_relation_data(nodesList, boundaryNodesList, boundary):
 
     return rotatedNodesList, rotatedBoundaryNodesList.tolist(), rotatedBoundary.tolist()
 
+
+# function to augment a geographic value in the dataset with reflections across the x/y axis.
 def reflect_relation_data(relativeNodesList, relativeBoundaryNodesList, relativeBoundary):
     reflect_x = 1
     reflect_y = 0
@@ -256,12 +259,13 @@ def round_relation_data(augmentedNodesList, augmentedBoundaryNodesList, augmente
 
     return augmentedNodesList, augmentedBoundaryNodesList, augmentedBoundary
 
+
 # for every relation, get our neighborhood data
 with open("training_data.txt", "w") as file:
 
     for relation in relations:
         # skip any relations that have already been completed (default: 0)
-        if (relation >= 1446449):
+        if (relation >= 0):
             print(relation)
 
             nodesList, boundaryNodesList, boundary = get_relation_data(relation)
@@ -270,6 +274,12 @@ with open("training_data.txt", "w") as file:
             if (not invalid_polygon and len(boundaryNodesList) > 0):
                     # convert all the absolute geographic coordinates to relative ones
                     relativeNodesList, relativeBoundaryNodesList, relativeBoundaryList = convert_absolute_to_relative_coords(nodesList, boundaryNodesList, boundary)
+
+                    roundedNodesList, roundedBoundaryNodesList, roundedBoundary = round_relation_data(nodesList, boundaryNodesList, boundary)
+                    new_entry = '''{\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": \"bounds: ''' + str(roundedBoundary) + '   connecting points: ' + str(roundedBoundaryNodesList) + '''\"}]}, {\"role\": \"model\", \"parts\": [{\"text\": \"''' + str(roundedNodesList) + '''\"}]}]}'''
+
+                    file.write(new_entry + "\n")
+                    file.flush()
 
                     # repeat multiple times to get many augmentations for the data
                     for i in range(random.randint(3,5)):
@@ -287,13 +297,7 @@ with open("training_data.txt", "w") as file:
                         # round every value to 5 decimal points
                         roundedNodesList, roundedBoundaryNodesList, roundedBoundary = round_relation_data(augmentedNodesList, augmentedBoundaryNodesList, augmentedBoundary)
 
-                        # uncomment for ChatGPT formatted dataset
-                        #new_entry = '''{\"messages\": [{\"role\": \"system\", \"content\": \"Your job is to draw new neighborhoods given the coordinate boundaries listed by the user. Within those boundaries, draw roads from the supplied connecting points with the format [[(lat, long), (lat, long)]] where the inner square brackets represent a single road and every coordinate pair represents a point on that road.\"}, {\"role\": \"user\", \"content\": \"bounds: ''' + str(relativeNodesList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '''\"}, {\"role\": \"assistant\", \"content\": \"''' + str(nodesList) + "\"}]}"
-
-                        # uncomment for Gemini formatted dataset
-                        #new_entry = "  [\"bounds: " + str(relativeBoundaryList) + '   connecting points: ' + str(relativeBoundaryNodesList) + '\", \"' + str(relativeNodesList) + '\"],'
-                        
-                        # uncomment for Gemini 2.0 formatted dataset
+                        # Gemini 2.0 fine-tuning formatt
                         new_entry = '''{\"contents\": [{\"role\": \"user\", \"parts\": [{\"text\": \"bounds: ''' + str(roundedBoundary) + '   connecting points: ' + str(roundedBoundaryNodesList) + '''\"}]}, {\"role\": \"model\", \"parts\": [{\"text\": \"''' + str(roundedNodesList) + '''\"}]}]}'''
 
                         file.write(new_entry + "\n")

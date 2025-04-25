@@ -1,30 +1,136 @@
 # generative-neighborhoods
-Uses a fine-tuned LLM to create new urban neighborhoods.
+
+WSU CS 440 Artificial Intelligence 
+
+This application provides an end-to-end workflow for interactive geospatial storytelling: users sketch a polygon on a Leaflet map to define an area of interest, the backend then retrieves OpenStreetMap data within that region, processes the street network to identify connectivity patterns, and constructs context-rich prompts for a fine-tuned LLM. The system synthesizes raw geodata into detailed, human-readable descriptions of neighborhood character, walkability, landmark highlights, and spatial relationships.
+
+## Features
+
+- **Interactive Frontend**: Draw polygons on a Leaflet map and submit to backend.
+- **Flask Backend API**: Exposes `/api/submit_polygon` for prompt generation and data retrieval.
+- **Prompt Builder**: `form_prompt.py` constructs targeted prompts for the fine‑tuned LLM.
+- **Street Network Utilities**: `street_utils.py` processes OSM street data for analysis.
+- **OSM Data Ingestion**: Scripts (`getOSMFiles.py`, `getrelations.py`, `convert_to_gpx.py`) to fetch, parse, and convert OSM XML to GPX.
+- **Relation ID Extraction**: `extract_relation_ids.py` aggregates relation IDs into `neighborhood_ids.txt`.
+- **Batch Prompt Generation**: `generate_neighborhood_prompts.py` runs the LLM over many neighborhood IDs.
+
+## Project Structure
+
+```plaintext
+generative-neighborhoods/
+├── backend/
+│   ├── app.py
+│   ├── form_prompt.py
+│   ├── requirements.txt
+│   └── street_utils.py
+├── dataset/
+│   ├── getOSMFiles.py
+│   └── getrelations.py
+├── evaluate/
+│   └── convert_to_gpx.py
+├── frontend/
+│   ├── index.html
+│   ├── js/
+│   │   └── map.js
+│   └── Css/
+│       └── style.css
+├── overpass/
+│   ├── overpass_output_data/
+│   ├── extract_relation_ids.py
+│   ├── generate_neighborhood_prompts.py
+│   └── neighborhood_ids.txt
+├── .gitignore
+└── README.md
+```
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone <your-repo-url> generative-neighborhoods
+cd generative-neighborhoods
+```
+
+### 2. Setup Backend
+
+```bash
+cd backend
+python -m venv .venv            # Create a virtual environment
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt  # Install required Python packages
+```
+
+### 3. Serve Frontend
+
+No build step required—just serve the `frontend/` directory:
+
+- **Option A:** Open `frontend/index.html` directly in a browser.
+- **Option B:** Run a simple HTTP server:
+  ```bash
+  cd frontend
+  python -m http.server 8000
+  ```
+  Then visit `http://localhost:8000/index.html`.
 
 ## Usage
-**extract_relation_ids.py**
 
-Parses each .osm (or .xml) file, collects all relation IDs, remove duplicates, then writes to neighborhood_ids.txt.
+### Run the Backend API
 
-1. Place all Overpass XML output files into directory 'overpass_output_data'
-2. Run 'extract_relation_ids.py' by:
-```
-python3 extract_relation_ids.py overpass_output_data/*.osm -o neighborhood_ids.txt
-```
-
-# Polygon → Street‑list Demo
-
-## 1  Clone & install
 ```bash
-git clone <your‑repo‑url> demo
-cd demo
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -r backend/requirements.txt
+cd backend
+PYTHONPATH=. python app.py
+```
 
+By default, the server listens on `http://127.0.0.1:5050`.
 
+### Open the Frontend
 
-Then in the terminal:
-PYTHONPATH=backend python3 backend/app.py
+1. Open the map UI (see "Serve Frontend").
+2. Sketch a polygon and click **Submit to backend**.
+3. View JSON output (prompt, relation data, etc.) in the console panel.
 
-Start liveserver through index.html
+### Command‑Line Scripts
 
+#### Extract Relation IDs
+
+Collect all relation IDs from OSM XML files:
+
+```bash
+python extract_relation_ids.py path/to/osm_files/*.osm -o neighborhood_ids.txt
+```
+
+#### Batch Prompt Generation
+
+Generate neighborhood descriptions for each ID:
+
+```bash
+python generate_neighborhood_prompts.py \
+  --input neighborhood_ids.txt \
+  --output prompts.json
+```
+
+## Script Details
+
+- **getOSMFiles.py**: Fetches OSM data using Overpass queries for specified bounding boxes.
+- **getrelations.py**: Parses OSM XML to extract `<relation>` elements.
+- **convert\_to\_gpx.py**: Converts OSM XML data into GPX tracks for external tools.
+- **street\_utils.py**: Builds and analyzes street networks (via osmnx & geopandas).
+- **form\_prompt.py**: Assembles structured prompts for the fine-tuned LLM model.
+- **generate\_neighborhood\_prompts.py**: Reads `neighborhood_ids.txt`, queries the LLM, and writes JSON outputs.
+
+## API Specification
+
+- **Endpoint**: `POST /api/submit_polygon`
+- **Request Body**: JSON with fields:
+  - `polygon`: Array of `[lat, lng]` vertices.
+  - `returnPrompt`: `true` to return the raw prompt string alongside analysis.
+- **Response**: JSON containing keys:
+  - `prompt`: The LLM prompt used.
+  - `streets`: Topology or summary of streets inside the polygon.
+  - `description`: Generated neighborhood description (if configured).
+
+## Configuration
+
+- Default host: `127.0.0.1`, port: `5050`.&#x20;
+- LLM credentials and endpoint should be set in the environment or a `.env` file (not committed for security).

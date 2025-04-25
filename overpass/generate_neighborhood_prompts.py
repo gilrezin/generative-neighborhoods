@@ -2,7 +2,44 @@ import argparse
 import xml.etree.ElementTree as ET
 import os
 import json
+import random
+import copy
 from collections import defaultdict
+from shapely.affinity import rotate, scale
+from shapely.geometry import Polygon, Point
+from shapely.ops import unary_union
+
+def get_relations(osm_root, relation):
+    "Computes the convex hull polygon of a relation's member nodes"
+    nodes = []
+    # Get all mem. nodes that have a lat/lon attrib.
+    for member in relation.findall("member"):
+        if member.attrib.get("type") == "node":
+            # Reference a node by its ref ID
+            node = osm_root.find(f".//node[@id='{member.attrib['ref']}']")
+            # Only include nots with valid lat/lon attrib.
+            if node is not None and 'lat' in node.attrib and 'lon' in node.attrib:
+                lon = float(node.attrib['lon'])
+                lat = float(node.attrib['lat'])
+                nodes.append(Point(lon, lat))
+    # Merge all the points and return the convex hull
+    convex_hull_nodes = unary_union(nodes)
+    return convex_hull_nodes.convex_hull
+
+def augment_convex_hull_polygon(poly, num_var = 5, max_rot_deg = 15, max_scale_per = 0.1):
+    "Generate rotated and scaled variants of a convex hull polygon"
+    variations = []
+    for _ in range(num_var):
+        # Rotate by a rand. angle between the bounds
+        angle = random.uniform(-max_rot_deg, max_rot_deg)
+        point1 = rotate(poly, angle, origin = 'centroid')
+        # Scale by rand. factor between the bounds
+        scale_factor = random.uniform(-max_scale_per, max_scale_per)
+        point2 = scale(point1, xfact = scale_factor, yfact = scale_factor, origin='centroid')
+        # Collect variants
+        variations.append(point2)
+    
+    return variations
 
 def get_bounding_box(relation_elements):
     """Extract the bounding box coordinates from relation members"""
@@ -159,38 +196,42 @@ def process_neighborhood(relation_id, osm_files):
                     if tag.get("k") == "name":
                         neighborhood_data["name"] = tag.get("v")
                 
-                # Extract bounding box (in a real implementation, we'd need to process the actual geometry)
-                neighborhood_data["bbox"] = get_bounding_box(relation.findall("member"))
-                
-                # Extract amenities
-                neighborhood_data["amenities"] = get_amenities(root, neighborhood_data["bbox"])
-                
-                # Extract connecting streets
-                neighborhood_data["connecting_streets"] = get_connecting_streets(root, neighborhood_data["bbox"])
-                
-                # We found the relation, no need to check other files
                 break
         except Exception as e:
             print(f"Error processing {file_path} for relation {relation_id}: {e}")
     
-    # Generate the prompt
+    # Generate multiple prompts
     if neighborhood_data["name"]:
-        prompt = generate_prompt(
-            neighborhood_data["name"],
-            neighborhood_data["bbox"],
-            neighborhood_data["amenities"],
-            neighborhood_data["connecting_streets"]
-        )
+        base_polygons = get_relations(root, relation)
+        all_polygons = [base_polygons] + augment_convex_hull_polygon(base_polygons, num_var = 5)
         
-        return neighborhood_data["name"], prompt
+        outputs = []
+        for idx, poly in enumerate(all_polygons):
+            minx, miny, maxx, maxy = poly.bounds
+            bbox = {"min_lat": miny, "min_lon": minx, "max_lat": maxy, "max_lon": maxx}
+            # Extract amenities
+            amenities = get_amenities(root, bbox)
+            # Extract connecting streets
+            connecting_streets = get_connecting_streets(root, bbox)
+            
+            prompt = generate_prompt(
+                neighborhood_data["name"],
+                bbox,
+                amenities,
+                connecting_streets
+            )
+            outputs.append((f"{neighborhood_data['name'].replace(' ', '_').lower()}_{idx}", prompt))
+        
+        return outputs
     
-    return None, None
+    return []
 
 def main():
     parser = argparse.ArgumentParser(description="Generate prompts for neighborhood generation")
     parser.add_argument("relation_ids_file", help="File containing neighborhood relation IDs")
     parser.add_argument("osm_dir", help="Directory containing OSM data files")
     parser.add_argument("-o", "--output_dir", default="neighborhood_prompts", help="Directory to save generated prompts")
+    parser.add_argument("-n", "--num_variations", type=int, default=5, help="Number of augmentations per neighborhood")
     
     args = parser.parse_args()
     
@@ -209,23 +250,14 @@ def main():
     prompts_data = {}
     for relation_id in relation_ids:
         print(f"Processing neighborhood with relation ID: {relation_id}")
-        neighborhood_name, prompt = process_neighborhood(relation_id, osm_files)
-        
-        if neighborhood_name and prompt:
-            # Save individual prompt
-            prompt_file = os.path.join(args.output_dir, f"{neighborhood_name.replace(' ', '_').lower()}.txt")
-            with open(prompt_file, "w") as f:
-                f.write(prompt)
+        variants = process_neighborhood(relation_id, osm_files, num_variations = args.num_variations)
+        for suffix, prompt in variants:
+            prompt_file = os.path.join(args.output_dir, f"{suffix}.txt")
+            with open(prompt_file, "w") as fp:
+                fp.write(prompt)
             
-            # Store for the combined file
-            prompts_data[relation_id] = {
-                "name": neighborhood_name,
-                "prompt": prompt
-            }
-            
-            print(f"  - Generated prompt for {neighborhood_name}")
-        else:
-            print(f"  - Could not generate prompt for relation ID {relation_id}")
+            prompts_data.setdefault(relation_id, []).append({"suffix": suffix, "prompt": prompt})
+            print(f"  - Generated prompt: {prompt_file}")
     
     # Save all prompts to a combined JSON file
     combined_file = os.path.join(args.output_dir, "all_neighborhood_prompts.json")

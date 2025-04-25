@@ -47,10 +47,13 @@ def filter_relations():
         polygons = list(polygonize(bbox))
 
         # only obtain small neighborhoods
-        if (len(polygons) > 0 and polygons[0].area < 0.00001):
+        if (len(polygons) > 0 and polygons[0].area > 0 and polygons[0].area < 0.00002):
             relations.append(data.relations[relation].id)
 
+    print(len(relations))
     return relations
 
+# uncomment to generate a new object containing all relations (~5min to generate)
 #get_admin_relations()
-print(filter_relations())
+
+#print(filter_relations())

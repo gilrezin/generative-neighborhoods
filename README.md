@@ -138,5 +138,14 @@ python generate_neighborhood_prompts.py \
 
 ## Additional Resources
 
+<<<<<<< Updated upstream
 Demo video: https://drive.google.com/file/d/1wdi3KNKeUoyoSfaD1CcY5WbWntgAPDxA/view?usp=sharing
 Presentation: https://docs.google.com/presentation/d/1XstGsTASWr0p0tD-64O3O3yrBpZUD6nb/edit?usp=sharing&ouid=114650599401108550145&rtpof=true&sd=true
+=======
+Then in the terminal:
+PYTHONPATH=backend python3 backend/app.py
+
+Start liveserver through index.html
+
+
+>>>>>>> Stashed changes

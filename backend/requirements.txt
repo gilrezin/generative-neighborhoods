@@ -3,4 +3,5 @@ Flask-Cors==4.0.0
 shapely==2.0.3
 osmnx==1.9.3
 geopandas==0.14.4        # pulled in automatically by osmnx, but explicit never hurts
-networkx==3.3
+networkx==2.8.8
+

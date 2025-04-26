@@ -134,3 +134,9 @@ python generate_neighborhood_prompts.py \
 
 - Default host: `127.0.0.1`, port: `5050`.&#x20;
 - LLM credentials and endpoint should be set in the environment or a `.env` file (not committed for security).
+
+
+## Additional Resources
+
+Demo video: https://drive.google.com/file/d/1wdi3KNKeUoyoSfaD1CcY5WbWntgAPDxA/view?usp=sharing
+Presentation: https://docs.google.com/presentation/d/1XstGsTASWr0p0tD-64O3O3yrBpZUD6nb/edit?usp=sharing&ouid=114650599401108550145&rtpof=true&sd=true

@@ -21,9 +21,9 @@ def polygon_to_prompt(polygon, connecting_nodes):
         connecting_nodes[i] = tuple(f"{x - y:.5f}" for x, y in zip(connecting_nodes[i], relativeCoordinateZero))
 
     # form a prompt accepted by the LLM
-    print("bounds: [" + str(boundaryCoords) + "]   connecting points: " + str(connecting_nodes))
+    return "bounds: [" + str(boundaryCoords) + "]   connecting points: " + str(connecting_nodes)
 
 # input values from the command line
-polygon = Polygon(wkt.loads(sys.argv[1]))
-boundary_nodes = ast.literal_eval(sys.argv[2])
-polygon_to_prompt(polygon, boundary_nodes)
+#polygon = Polygon(wkt.loads(sys.argv[1]))
+#boundary_nodes = ast.literal_eval(sys.argv[2])
+#polygon_to_prompt(polygon, boundary_nodes)

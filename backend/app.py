@@ -6,6 +6,10 @@ from flask_cors import CORS
 from shapely.geometry import Polygon
 from street_utils import streets_intersecting_polygon
 from form_prompt import polygon_to_prompt   # your existing helper
+from google import genai
+from google.genai import types
+
+client = genai.Client(api_key='AIzaSyDZRso0rXXUwsMSnoFVYeLVOLwPqIZsZKk')
 
 app = Flask(__name__)
 CORS(app)    # allow requests from localhost file:// or any domain while testing
@@ -39,9 +43,27 @@ def submit_polygon():
     response = {"streets": streets}
 
     if body.get("returnPrompt"):                           # optional
-        poly   = Polygon(coords_tuples)
+        poly = Polygon(coords_tuples)
         prompt = polygon_to_prompt(poly, streets)
-        response["prompt"] = prompt
+
+        # call the LLM with the prompt
+        #print(prompt + "\nGenerating...")
+        tuned_models = list(client.tunings.list())
+        newest_model = tuned_models[len(tuned_models) - 1]
+
+        invalid_output = True
+        while (invalid_output):
+            response = client.models.generate_content(
+                model=newest_model.name,
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=0)
+            )
+
+            # check that the output is valid
+            if (response.text.count('[') == response.text.count(']')):
+                invalid_output = False
+
+        response["prompt"] = response.text
 
     return jsonify(response), 200
 

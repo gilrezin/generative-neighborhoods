@@ -19,7 +19,7 @@ def convert_to_gpx(minBounds, maxBounds, input):
         output += "  <trk>\n    <trkseg>\n"
         for coordinate in line:
             # convert back to geographic coordinates
-            output += "      <trkpt lat=\"" + str(round(float(coordinate[0]) * (maxBounds[0] - minBounds[0]) + minBounds[0], 5)) + "\" lon=\"" + str(round(float(coordinate[1]) * (maxBounds[1] - minBounds[1]) + minBounds[1], 5)) + "\"/>\n"
+            output += "      <trkpt lat=\"" + str(round(float((coordinate[0])) * (maxBounds[0] - minBounds[0]) + minBounds[0], 5)) + "\" lon=\"" + str(round(float(coordinate[1]) * (maxBounds[1] - minBounds[1]) + minBounds[1], 5)) + "\"/>\n"
         output += "    </trkseg>\n  </trk>\n"
 
     output += "</gpx>"
@@ -29,4 +29,4 @@ def convert_to_gpx(minBounds, maxBounds, input):
         file.write(output)
     print("success!")
 
-#convert_to_gpx(ast.literal_eval(sys.argv[1]), ast.literal_eval(sys.argv[2]), sys.argv[3])
+convert_to_gpx(ast.literal_eval(sys.argv[1]), ast.literal_eval(sys.argv[2]), sys.argv[3])

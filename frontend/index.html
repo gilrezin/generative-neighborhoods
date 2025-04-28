@@ -20,15 +20,16 @@
     <legend><strong>LLM node renderer</strong></legend>
 
     <!-- bounding box inputs -->
-    <label>min Lat <input id="minLat" type="number" step="0.00001" value="46.72200"></label>
-    <label>min Lng <input id="minLng" type="number" step="0.00001" value="-117.17500"></label>
-    <label>max Lat <input id="maxLat" type="number" step="0.00001" value="46.73600"></label>
-    <label>max Lng <input id="maxLng" type="number" step="0.00001" value="-117.15750"></label>
+    <label>min Lat <input id="minLat" type="number" step="0.00001" value="46.724"></label>
+    <label>min Lng <input id="minLng" type="number" step="0.00001" value="-117.167"></label>
+    <label>max Lat <input id="maxLat" type="number" step="0.00001" value="46.732"></label>
+    <label>max Lng <input id="maxLng" type="number" step="0.00001" value="-117.158"></label>
 
     <br><br>
     <!-- textarea for the raw LLM output -->
-    <textarea id="nodeInput" rows="3" cols="80"
-      placeholder="Paste LLM output e.g. [[(1.0, 0.05), (0.83, 0.39), ...]]"></textarea>
+    <textarea id="nodeInput" rows="4" cols="80"
+  placeholder='Example: [[[0.10,0.39],[0.14,0.48]], [[0.63,0.04],[0.63,0.04]]]' >
+  </textarea>
     <br>
     <button id="displayNodesBtn">Display Nodes on Map</button>
   </fieldset>

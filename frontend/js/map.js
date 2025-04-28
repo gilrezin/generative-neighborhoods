@@ -84,24 +84,61 @@ document.addEventListener('DOMContentLoaded', () => {
     ]);
   }
   
-  document.getElementById('displayNodesBtn').addEventListener('click', ()=>{
-    const raw   = document.getElementById('nodeInput').value;
-    const minLat= parseFloat(document.getElementById('minLat').value);
-    const minLng= parseFloat(document.getElementById('minLng').value);
-    const maxLat= parseFloat(document.getElementById('maxLat').value);
-    const maxLng= parseFloat(document.getElementById('maxLng').value);
-    try{
-      const norm = parseLLMFormat(raw);
-      const geo  = scaleToGeo(norm,minLat,minLng,maxLat,maxLng);
-      L.polyline(geo,{ color:'blue', weight:4, opacity:0.8 }).addTo(map);
-      map.fitBounds(geo);
-      document.getElementById('output').textContent =
-        `Displayed ${geo.length} nodes (scaled to geo).`;
-    }catch(err){
-      console.error(err);
-      document.getElementById('output').textContent='❌ parse error';
+  // 👇 utility that converts relative (0-1) pairs → real lat/lng
+function toLatLngPair([relLat, relLng], minLat, minLng, maxLat, maxLng) {
+  const lat = relLat * (maxLat - minLat) + minLat;   // same math used in convert_to_gpx.py :contentReference[oaicite:0]{index=0}&#8203;:contentReference[oaicite:1]{index=1}
+  const lng = relLng * (maxLng - minLng) + minLng;
+  return [lat, lng];
+}
+
+document
+  .getElementById("displayNodesBtn")
+  .addEventListener("click", () => {
+    // -------- 1. grab & sanity-check the raw textarea  --------
+    let raw = document.getElementById("nodeInput").value.trim();
+    if (!raw) return alert("Paste the model’s output first!");
+
+    // the model sometimes gives `(x, y)` pairs – turn them into JSON
+    raw = raw.replaceAll("(", "[").replaceAll(")", "]");
+
+    let lines;
+    try {
+      lines = JSON.parse(raw);           // expecting  [ [ [x,y], …], [ [x,y], …] ]
+    } catch (e) {
+      return alert("Couldn’t parse the text as JSON.\n" + e);
+    }
+
+    // -------- 2. pull the bounding-box the user typed in  --------
+    const minLat = parseFloat(document.getElementById("minLat").value);
+    const minLng = parseFloat(document.getElementById("minLng").value);
+    const maxLat = parseFloat(document.getElementById("maxLat").value);
+    const maxLng = parseFloat(document.getElementById("maxLng").value);
+
+    // -------- 3. draw every inner array as a polyline  --------
+    // (clear old preview first)
+    if (window.__llmPreviewGroup) map.removeLayer(window.__llmPreviewGroup);
+
+    const layerGroup = L.featureGroup().addTo(map);
+    window.__llmPreviewGroup = layerGroup;
+
+    lines.forEach((lineArr, idx) => {
+      // 👇 NEW: skip if all points are the same
+      const uniq = [...new Set(lineArr.map(JSON.stringify))];
+      if (uniq.length < 2) return;
+    
+      const latLngs = lineArr.map(pt =>
+        toLatLngPair(pt, minLat, minLng, maxLat, maxLng)
+      );
+    
+      L.polyline(latLngs, { color: "red", weight: 3 }).addTo(layerGroup);
+    });
+    
+
+    // optional: fit map to the drawn result
+    if (layerGroup.getLayers().length) {
+      map.fitBounds(layerGroup.getBounds().pad(0.2));
     }
   });
-  
+
   });
   

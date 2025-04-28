@@ -8,10 +8,6 @@ def streets_intersecting_polygon(coords: List[Tuple[float, float]]) -> List[str]
     if not poly.is_valid:
         poly = poly.buffer(0)
 
-    # Buffer it a little
-    buffer_distance = 0.001  # roughly 110m
-    buffered_poly = poly.buffer(buffer_distance)
-
     # Prepare Overpass query string
     polygon_str = " ".join(f"{lat} {lon}" for (lat, lon) in coords)
     query = f"""

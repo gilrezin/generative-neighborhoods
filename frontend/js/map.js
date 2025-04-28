@@ -22,17 +22,35 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('submitBtn').disabled = false;
   });
   
-  document.getElementById('submitBtn').addEventListener('click', async ()=>{
+  document.getElementById('submitBtn').addEventListener('click', async (e)=>{
+    e.preventDefault();
     if(!latestPolygon) return;
     const coords = latestPolygon.getLatLngs()[0].map(ll=>[ll.lat, ll.lng]);
-    const res = await fetch('http://127.0.0.1:5050/api/submit_polygon',{
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    try
+    {
+      const res = await fetch('http://127.0.0.1:5050/api/submit_polygon',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ polygon:coords, returnPrompt:true })
-    });
-    const data = await res.json();
-    document.getElementById('output').textContent =
-        JSON.stringify(data,null,2);
+        body:JSON.stringify({ polygon:coords, returnPrompt:true }),
+        signal: controller.signal
+      });
+      if (!res.ok) { // If server returns 4xx or 5xx
+        throw new Error(`Server error: ${res.status}`);
+      }
+      const data = await res.json();
+      document.getElementById('output').textContent =
+          JSON.stringify(data,null,2);
+    }
+    catch (err)
+    {
+      console.error('Error retrieving output:', err);
+      document.getElementById('output').textContent = 'Error retrieving output.';
+    }
+    
   });
   
   /* ---------- 3. GPX file upload ---------- */

@@ -10,7 +10,7 @@ def polygon_to_prompt(polygon, connecting_nodes):
     minx, miny, maxx, maxy = polygon.bounds
     minBounds = (minx, miny)
     maxBounds = (maxx, maxy)
-    print("Boundary is from " + str(minBounds) + " to " + str(maxBounds))
+    #print("Boundary is from " + str(minBounds) + " to " + str(maxBounds))
 
     # set the boundary's coordinates to relative coordinates
     for i in range(len(boundaryCoords)):
@@ -23,7 +23,7 @@ def polygon_to_prompt(polygon, connecting_nodes):
         connecting_nodes[i] = (round((connecting_nodes[i][0] - minx) / (maxx - minx), 5), round((connecting_nodes[i][1] - miny) / (maxy - miny), 5))
 
     # form a prompt accepted by the LLM
-    return "bounds: [" + str(boundaryCoords) + "]   connecting points: " + str(connecting_nodes)
+    return "bounds: [" + str(boundaryCoords) + "]   connecting points: " + str(connecting_nodes), polygon.bounds
 
 #Polygon([(-117.1712302377766 46.72818251656378,-117.17021260962512 46.72770295327874,-117.17030067368086 46.727538626440065,-117.16984078419759 46.72677064317452,-117.1691362722788 46.72608313808237,-117.16844643828229 46.725570018818786,-117.16883294114024 46.72531513412477,-117.17050615637211 46.72637826321031,-117.17080948747551 46.72659625246513,-117.17137701074608 46.72785721882141,-117.1712302377766 46.72818251656378)])
 #polygon = Polygon(wkt.loads(sys.argv[1]))

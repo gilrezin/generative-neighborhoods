@@ -8,11 +8,16 @@ from street_utils import streets_intersecting_polygon
 from form_prompt import polygon_to_prompt   # your existing helper
 from google import genai
 from google.genai import types
+from waitress import serve
+from threading import Thread
+import time
 
 client = genai.Client(api_key='AIzaSyDZRso0rXXUwsMSnoFVYeLVOLwPqIZsZKk')
 
 app = Flask(__name__)
 CORS(app)    # allow requests from localhost file:// or any domain while testing
+
+jobs = {}
 
 @app.route("/api/submit_polygon", methods=["POST"])
 def submit_polygon():
@@ -39,35 +44,42 @@ def submit_polygon():
         return jsonify({"error": "Coordinates must be [[lat, lon], ...]"}), 400
 
     streets = streets_intersecting_polygon(coords_tuples)
-
+    #streets = get_streets(coords_tuples)
+    #await asyncio.sleep(10)
+    #thread = Thread(target=streets_intersecting_polygon, args=(coords_tuples))
+    #thread.start()
+    #treets = thread.target
     response = {"streets": streets}
 
-    if body.get("returnPrompt"):                           # optional
+    if body.get("returnPrompt"):
         poly = Polygon(coords_tuples)
-        prompt = polygon_to_prompt(poly, streets)
+        prompt, bounds = polygon_to_prompt(poly, streets)
 
         # call the LLM with the prompt
         #print(prompt + "\nGenerating...")
         tuned_models = list(client.tunings.list())
         newest_model = tuned_models[len(tuned_models) - 1]
 
-        invalid_output = True
-        while (invalid_output):
-            response = client.models.generate_content(
-                model=newest_model.name,
-                contents=prompt,
-                config=types.GenerateContentConfig(temperature=0)
-            )
+        response = client.models.generate_content(
+            model=newest_model.name,
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=0)
+        )
 
-            # check that the output is valid
-            if (response.text.count('[') == response.text.count(']')):
-                invalid_output = False
+        llm_output = response.text
+        # fix any broken output
+        if (llm_output.count('[') != llm_output.count(']')):
+            llm_output = llm_output[:llm_output.rfind(")")] + ']]'
 
-        response["prompt"] = response.text
+        #response["prompt"] = response.text
 
-    return jsonify(response), 200
+    return jsonify(llm_output, bounds), 200
+
+async def get_streets(coords_tuples):
+    return await streets_intersecting_polygon(coords_tuples)
 
 
 if __name__ == "__main__":
     # `python -m backend.app` also works
-    app.run(host="0.0.0.0", port=5050, debug=True)
+    app.run(host="0.0.0.0", port=5050, debug=True, use_reloader=False)
+    #serve(app, host="0.0.0.0", port=5050)

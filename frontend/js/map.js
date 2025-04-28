@@ -42,8 +42,15 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(`Server error: ${res.status}`);
       }
       const data = await res.json();
+      console.log(data)
       document.getElementById('output').textContent =
           JSON.stringify(data,null,2);
+      document.getElementById('nodeInput').textContent = data[0].toString();
+      document.getElementById('minLat').value = data[1][0].toString();
+      document.getElementById('minLng').value = data[1][1].toString();
+      document.getElementById('maxLat').value = data[1][2].toString();
+      document.getElementById('maxLng').value = data[1][3].toString();
+      document.getElementById('displayNodesBtn').click();
     }
     catch (err)
     {

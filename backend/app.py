@@ -54,13 +54,15 @@ def submit_polygon():
         response = client.models.generate_content(
             model=newest_model.name,
             contents=prompt,
-            config=types.GenerateContentConfig(temperature=0)
+            config=types.GenerateContentConfig(temperature=0.1)
         )
 
         llm_output = response.text
         # fix any broken output
+        if (llm_output.count('(') != llm_output.count(')')):
+            llm_output = llm_output + ')'
         if (llm_output.count('[') != llm_output.count(']')):
-            llm_output = llm_output[:llm_output.rfind(")")] + ']]'
+            llm_output = llm_output[:llm_output.rfind(")")+1] + ']]'
 
     return jsonify(llm_output, bounds), 200
 

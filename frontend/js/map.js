@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log(data)
       document.getElementById('output').textContent =
           JSON.stringify(data,null,2);
-      document.getElementById('nodeInput').textContent = data[0].toString();
+      document.getElementById('nodeInput').value = JSON.stringify(data[0]);
       document.getElementById('minLat').value = data[1][0].toString();
       document.getElementById('minLng').value = data[1][1].toString();
       document.getElementById('maxLat').value = data[1][2].toString();

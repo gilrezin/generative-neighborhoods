@@ -44,6 +44,7 @@ generative-neighborhoods/
 ```
 
 ## Installation
+[Google Collab Demo](https://colab.research.google.com/drive/1dUrVk96BRs1eNaeU7V8up1XrDMJCwqtc?usp=sharing)
 
 ### 1. Clone the repository
 
@@ -139,8 +140,8 @@ python generate_neighborhood_prompts.py \
 ## Additional Resources
 
 <<<<<<< Updated upstream
-Demo video: https://drive.google.com/file/d/1wdi3KNKeUoyoSfaD1CcY5WbWntgAPDxA/view?usp=sharing
-Presentation: https://docs.google.com/presentation/d/1XstGsTASWr0p0tD-64O3O3yrBpZUD6nb/edit?usp=sharing&ouid=114650599401108550145&rtpof=true&sd=true
+[Demo Video](https://drive.google.com/file/d/1hjGP54UIsMnjF1F6Av24EcTjigSOBPyP/view?usp=sharing)
+[Presentation](https://docs.google.com/presentation/d/1XstGsTASWr0p0tD-64O3O3yrBpZUD6nb/edit?usp=sharing&ouid=114650599401108550145&rtpof=true&sd=true)
 =======
 Then in the terminal:
 PYTHONPATH=backend python3 backend/app.py

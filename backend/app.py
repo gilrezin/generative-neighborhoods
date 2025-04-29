@@ -58,9 +58,14 @@ def submit_polygon():
         )
 
         llm_output = response.text
+        
         # fix any broken output
+        if (llm_output.count(',') + 1 != llm_output.count('0.')):
+            llm_output = llm_output[:llm_output.rfind(",")-1]
+
         if (llm_output.count('(') != llm_output.count(')')):
             llm_output = llm_output + ')'
+
         if (llm_output.count('[') != llm_output.count(']')):
             llm_output = llm_output[:llm_output.rfind(")")+1] + ']]'
 

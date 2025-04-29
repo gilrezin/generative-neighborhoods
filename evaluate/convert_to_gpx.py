@@ -29,4 +29,5 @@ def convert_to_gpx(minBounds, maxBounds, input):
         file.write(output)
     print("success!")
 
-convert_to_gpx(ast.literal_eval(sys.argv[1]), ast.literal_eval(sys.argv[2]), sys.argv[3])
+# - Uncomment below for command-line usage -
+#convert_to_gpx(ast.literal_eval(sys.argv[1]), ast.literal_eval(sys.argv[2]), sys.argv[3])

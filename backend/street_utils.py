@@ -2,13 +2,14 @@ from typing import List, Tuple
 import overpy
 import shapely.geometry as sgeom
 
+# function used to find all streets that intersect the user's created boundary.
 def streets_intersecting_polygon(coords: List[Tuple[float, float]]) -> List[str]:
     # Build Shapely polygon
     poly = sgeom.Polygon([(lon, lat) for (lat, lon) in coords])
     if not poly.is_valid:
         poly = poly.buffer(0)
 
-    # Prepare Overpass query string
+    # Overpass query string - find all roads touching the polygon
     polygon_str = " ".join(f"{lat} {lon}" for (lat, lon) in coords)
     query = f"""
     way(poly:"{polygon_str}") ["highway"];
@@ -16,15 +17,12 @@ def streets_intersecting_polygon(coords: List[Tuple[float, float]]) -> List[str]
     out body;
     """
 
-    print("Starting graph")
     api = overpy.Overpass()
     try:
         result = api.query(query)
     except Exception as e:
         print(f"Error fetching graph: {e}")
         return []
-
-    print("Got graph!")
 
     # Build list of street LineStrings
     highwayExclude = ['footway', 'bridleway', 'steps', 'corridor', 'path', 'via_ferrata']
@@ -39,6 +37,7 @@ def streets_intersecting_polygon(coords: List[Tuple[float, float]]) -> List[str]
     if not edges:
         return []
     
+    # find all intersections
     intersections = []
     for edge in edges:
         if edge.intersects(poly):

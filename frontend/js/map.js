@@ -1,11 +1,11 @@
 /* global L */
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* ---------- 1. Base Leaflet map ---------- */
+  /* ---------- Base Leaflet map ---------- */
   const map = L.map('map').setView([46.73, -117.16], 15);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   
-  /* ---------- 2. Draw-a-polygon & submit ---------- */
+  /* ---------- Draw-a-polygon & submit ---------- */
   const drawnItems = new L.FeatureGroup().addTo(map);
   const drawControl = new L.Control.Draw({
     draw : { polygon:true, rectangle:false, marker:false, circle:false,
@@ -22,14 +22,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('submitBtn').disabled = false;
   });
   
+  // Submit button event action
   document.getElementById('submitBtn').addEventListener('click', async (e)=>{
     e.preventDefault();
     if(!latestPolygon) return;
     const coords = latestPolygon.getLatLngs()[0].map(ll=>[ll.lat, ll.lng]);
 
+    // timeout after 60s of waiting for server
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
 
+    // call backend
     try
     {
       const res = await fetch('http://127.0.0.1:5050/api/submit_polygon',{
@@ -43,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const data = await res.json();
       console.log(data)
+      // parse LLM output
       document.getElementById('output').textContent =
           JSON.stringify(data,null,2);
       document.getElementById('nodeInput').value = data[0].toString();
@@ -60,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
   });
   
-  /* ---------- 3. GPX file upload ---------- */
+  /* ---------- GPX file upload ---------- */
   let gpxLayer=null;
   document.getElementById('gpxUpload').addEventListener('change', e=>{
     const file = e.target.files[0]; if(!file) return;
@@ -75,33 +79,19 @@ document.addEventListener('DOMContentLoaded', () => {
     rdr.readAsText(file);
   });
   
-  /* ---------- 4. LLM normalized nodes → geographic ---------- */
-  function parseLLMFormat(txt){
-    // strip outer [[...]] then split on "), ("
-    const inner = txt.trim().replace(/^\[\[/,'').replace(/\]\]$/,'');
-    return inner.split(/\),\s*\(/).map(pair=>{
-      const [x,y]=pair.replace(/[()]/g,'').split(',').map(Number);
-      return [x,y];
-    });
-  }
-  function scaleToGeo(normCoords, minLat, minLng, maxLat, maxLng) {
-    return normCoords.map(([dLat, dLng]) => [
-      minLat + dLat * (maxLat - minLat),   // 1st value = latitude offset
-      minLng + dLng * (maxLng - minLng)    // 2nd value = longitude offset
-    ]);
-  }
-  
-  // 👇 utility that converts relative (0-1) pairs → real lat/lng
+  /* ---------- LLM normalized nodes to geographic ---------- */
+// function that converts relative (0-1) pairs to real lat/lng
 function toLatLngPair([relLat, relLng], minLat, minLng, maxLat, maxLng) {
   const lat = relLat * (maxLat - minLat) + minLat;   // same math used in convert_to_gpx.py :contentReference[oaicite:0]{index=0}&#8203;:contentReference[oaicite:1]{index=1}
   const lng = relLng * (maxLng - minLng) + minLng;
   return [lat, lng];
 }
 
+// Display Nodes button event
 document
   .getElementById("displayNodesBtn")
   .addEventListener("click", () => {
-    // -------- 1. grab & sanity-check the raw textarea  --------
+    // -------- grab & sanity-check the raw text area  --------
     let raw = document.getElementById("nodeInput").value.trim();
     if (!raw) return alert("Paste the model’s output first!");
 
@@ -115,13 +105,13 @@ document
       return alert("Couldn’t parse the text as JSON.\n" + e);
     }
 
-    // -------- 2. pull the bounding-box the user typed in  --------
+    // -------- pull the bounding-box the user typed in  --------
     const minLat = parseFloat(document.getElementById("minLat").value);
     const minLng = parseFloat(document.getElementById("minLng").value);
     const maxLat = parseFloat(document.getElementById("maxLat").value);
     const maxLng = parseFloat(document.getElementById("maxLng").value);
 
-    // -------- 3. draw every inner array as a polyline  --------
+    // -------- draw every inner array as a polyline  --------
     // (clear old preview first)
     if (window.__llmPreviewGroup) map.removeLayer(window.__llmPreviewGroup);
 
@@ -129,7 +119,7 @@ document
     window.__llmPreviewGroup = layerGroup;
 
     lines.forEach((lineArr, idx) => {
-      // 👇 NEW: skip if all points are the same
+      // skip if all points are the same
       const uniq = [...new Set(lineArr.map(JSON.stringify))];
       if (uniq.length < 2) return;
     
